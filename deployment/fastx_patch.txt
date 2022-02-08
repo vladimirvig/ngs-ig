@@ -1,0 +1,11 @@
+--- fastx.h	2020-09-21 17:41:17.000000000 -0700
++++ fastx.h.orig	2020-09-21 17:19:16.000000000 -0700
+@@ -58,7 +58,7 @@
+ 	OUTPUT_SAME_AS_INPUT=3
+ } OUTPUT_FILE_TYPE;
+ 
+-#pragma pack(1) 
++#pragma pack() 
+ typedef struct 
+ {
+ 	/* Record data - common for FASTA/FASTQ */

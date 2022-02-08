@@ -1,0 +1,9 @@
+# Pipeline progress accounting for processed reads:
+"Total", 102805
+"Extended", 102805
+"5trim", 100470
+"3trim", 95761
+"barcoded", 91496
+"clean", 90552
+"productive", 81443
+"Chimera", 18

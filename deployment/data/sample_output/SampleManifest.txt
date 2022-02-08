@@ -1,0 +1,23 @@
+# Warning: there are more fields in Sample Name than expected...
+# Warning: this usually means that unexpected values were encounered.
+# I ended up with this after parsing: "BALB p6wk3"
+# Sample manifest for Mm-BALB-p6wk3-spleen-UMI5RACENEB-variableNano-vv874pool876-IgG from 20200826
+processDate: 20220207_0506
+species: Mm
+subjectID: BALB+p6wk3
+chain: IgG
+timepoint: 
+immunogen: 
+adjuvant: 
+primer: vv874pool876
+trial: 
+replicate: 
+disease: 
+tissue: spleen
+libraryMethod: UMI5RACENEB
+experimentDate: 20200826
+libraryType: variableNano
+unused2: 
+unused3: 
+unused4: 
+responsiblePerson: 

@@ -1,0 +1,9 @@
+# Pipeline progress accounting for processed unique sequences:
+"Total", 102805
+"Extended", 102805
+"5trim", 100470
+"3trim", 95761
+"barcoded", 91496
+"clean", 6051
+"productive", 4004
+"Chimera", 18
