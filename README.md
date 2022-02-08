@@ -1,3 +1,5 @@
+# ngs-ig
+
 ## _Description:_
 
 This is a pipeline for trimming, filtering and annotation of next-gen sequencing (e.g., Illumina) data from rearranged immunoglobulin genes expressed in B-cell populations.
@@ -137,5 +139,3 @@ If you find this software useful, please use the following citation:
 V. Vigdorovich, B. G. Oliver, S. Carbonetti, N. Dambrauskas, M. D. Lange, C. Yacoob, W. Leahy, J. Callahan, L. Stamatatos, D. N. Sather, Repertoire comparison of the B-cell receptor-encoding loci in humans and rhesus macaques by next-generation sequencing. Clin Transl Immunology 5, e93 (2016).
 
 ![Pipeline Schematic](./deployment/assets/dataflow_schematic_whitebg_small.png)
-
-# ngs-ig
