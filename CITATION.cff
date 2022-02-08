@@ -1,0 +1,45 @@
+cff-version: 1.2.0
+message: Please cite the following works when using this software.
+title: Repertoire comparison of the B-cell receptor-encoding loci in humans and rhesus
+  macaques by next-generation sequencing
+authors:
+- family-names: Vigdorovich
+  given-names: Vladimir
+  orcid: "https://orcid.org/0000-0003-4195-4858"
+- family-names: Oliver
+  given-names: Brian G
+- family-names: Carbonetti
+  given-names: Sara
+- family-names: Dambrauskas
+  given-names: Nicholas
+- family-names: Lange
+  given-names: Miles D
+- family-names: Yacoob
+  given-names: Christina
+- family-names: Leahy
+  given-names: Will
+- family-names: Callahan
+  given-names: Jonathan
+- family-names: Stamatatos
+  given-names: Leonidas
+- family-names: Sather
+  given-names: D Noah
+doi: https://doi.org/10.1038/cti.2016.42
+url: https://pubmed.ncbi.nlm.nih.gov/27525066/
+abstract: Rhesus macaques (RMs) are a widely used model system for the study of vaccines,
+  infectious diseases and microbial pathogenesis. Their value as a model lies in their
+  close evolutionary relationship to humans, which, in theory, allows them to serve as
+  a close approximation of the human immune system. However, despite their prominence
+  as a human surrogate model system, many aspects of the RM immune system remain ill
+  characterized. In particular, B cell-mediated immunity in macaques has not been
+  sufficiently characterized, and the B-cell receptor-encoding loci have not been
+  thoroughly annotated. To address these gaps, we analyzed the circulating heavy- and
+  light-chain repertoires in humans and RMs by next-generation sequencing. By
+  comparing V gene segment usage, J-segment usage and CDR3 lengths between the two
+  species, we identified several important similarities and differences. These
+  differences were especially notable in the IgM(+) B-cell repertoire. However, the
+  class-switched, antigen-educated B-cell populations converged on a set of similar
+  characteristics, implying similarities in how each species responds to antigen. Our
+  study provides the first comprehensive overview of the circulating repertoires of
+  the heavy- and light-chain sequences in RMs, and provides insight into how they may
+  perform as a model system for B cell-mediated immunity in humans.
