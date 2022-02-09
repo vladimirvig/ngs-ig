@@ -8,6 +8,11 @@
 
 RESOURCEDIR="$DEPLOYMENT/imports"
 
+# set the BLAST_INSTALL flag if it has not already been set (possibly, in the Docker container environment)
+if [ -z $BLAST_INSTALL ]; then
+  BLAST_INSTALL='Y'
+fi
+
 ## variables passed to FLASH (step 1)
 FLASH_minoverlap=20
 FLASH_maxoverlap=200
