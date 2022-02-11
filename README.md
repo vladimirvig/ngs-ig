@@ -74,6 +74,8 @@ The 3' primer expected is __HsRhIgGCH1Rev__. This library is expected to contain
 
 ## _Operation via Docker (recommended):_
 
+A pre-built image may be found on [docker hub](https://hub.docker.com/r/vladimirvig/ngs-ig).
+
 ### _Building:_
 
 Installation requires an active [Docker](https://www.docker.com/) instance.
