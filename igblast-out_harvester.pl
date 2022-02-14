@@ -130,7 +130,7 @@ sub parse_igblast_block   # read from the IgBLAST output file and store data
                 $line = <$fh>;    # grab the next line for processing
                 chomp $line;
                 $result{'gene_usage'} = $line;
-                if ( $line =~ m|\t\-$|x ) { $result{'q_rev_flag'} = 1; }
+                if ( $line =~ m|\t\-\t?[^\t]*$|x ) { $result{'q_rev_flag'} = 1;}
             }
             elsif (/junction details based on top germline gene/) {
                 $line = <$fh>;    # grab the next line for processing
