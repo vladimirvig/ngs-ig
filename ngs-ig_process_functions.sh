@@ -506,7 +506,7 @@ function IgBLASToutputProcessing (){
   for f in input_fasta_split.*; do
     g=${f#*.}
     if [[ -f $DATANAME.${g}.igblast_out ]]; then
-      perl $WDIR/$SCRDIR/igblast-out_harvester.pl $DATANAME.${g}.igblast_out $f \
+      python3 $WDIR/$SCRDIR/igblast-out_harvester.py $DATANAME.${g}.igblast_out $f \
       >> $DATANAME.igblast.fasta
       echo "[$(date +%T)]...Completed transferring annotations from $DATANAME.${g}.igblast_out"
       rm $f # clean up the split-up fasta files
