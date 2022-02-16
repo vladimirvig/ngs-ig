@@ -17,12 +17,10 @@ declare -A validTissues=(["spleen"]=1 ["marrow"]=1 ["blood"]=1 ["node"]=1 ["PBMC
 declare -A primers5=(["all:all:UMI5RACE"]="adapter5UMI.conf"
   ["all:all:UMI5RACEASYM"]="adapterUMIasym.conf"
   ["all:all:UMI5RACENEB"]="adapter5UMIasym.conf"
-  ["all:all:multiplexNEB"]="adapter5multiplexNEB.conf"
 )
 
 declare -A primers3=(["all:all:UMI5RACEASYM"]="adapterUMIasym.conf"
   ["all:all:UMI5RACENEB"]="adapter3UMIasym.conf"
-  ["all:all:multiplexNEB"]="adapter3multiplexNEB.conf"
 )
 
 ####################################################################
@@ -30,16 +28,13 @@ declare -A primers3=(["all:all:UMI5RACEASYM"]="adapterUMIasym.conf"
 ####################################################################
 
 # Process-affecting variables
-# multiplex -- multiplex 5' primer pool
-# 5RACE -- 5'RACE library using SMARTer adapter
-# UMI5RACE -- 5'RACE library using SMARTer adapter, Illumina adapters dictated
-#              by primers
-# UMI5RACEASYM -- 5'RACE library using SMARTer adapter, asymmetric sequencing,
-#                  Illumina adapters ligated on (NEB)
-# UMI5RACEASYMext -- 5'RACE library using SMARTer adapter, asymmetric sequencing
-#                     but with FLASH extension, Illumina adapters ligated on (NEB)
-# UMI5RACENEB -- 5'RACE library using SMARTer adapter, Illumina adapters ligated
-#                  on (NEB), read stitching expected (e.g., UMI-HINGE libraries)
+# multiplexNEB -- multiplex 5' primer pool with Illumina adapters ligated on (NEB)
+# UMI5RACE -- 5'RACE library using SMARTer adapter with UMIs,
+#              Illumina adapters incorporated into primers
+# UMI5RACEASYM -- 5'RACE library using SMARTer adapter with UMIs,
+#                  Illumina adapters ligated on (NEB), asymmetric sequencing
+# UMI5RACENEB -- 5'RACE library using SMARTer adapter with UMIs, Illumina adapters ligated
+#                  on (NEB)
 
 declare -A validLibraryMethods=( ["UMI5RACE"]=1 ["UMI5RACEASYM"]=1
   ["UMI5RACENEB"]=1 ["multiplexNEB"]=1

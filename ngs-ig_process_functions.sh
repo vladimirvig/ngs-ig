@@ -159,12 +159,12 @@ function selectAdaptors (){
       cat $WDIR/$SCRDIR/adapters/primers/adapter${primer}_revcomp.fasta >> $WDIR/$SCRDIR/adapter3.fasta
       ;;
     multiplexNEB)
-      adapter5_lookup="all:all:multiplexNEB"
-      adapter3_lookup="all:all:multiplexNEB"
-      cp $WDIR/$SCRDIR/adapters/primers/adapter5multiplex.fasta $WDIR/$SCRDIR/adapter5.fasta
-      cp $WDIR/$SCRDIR/adapters/primers/adapter5multiplex_revcomp.fasta $WDIR/$SCRDIR/adapter5_revcomp.fasta
-      cp $WDIR/$SCRDIR/adapters/primers/adapter${primer}.fasta $WDIR/$SCRDIR/adapter3.fasta
-      cp $WDIR/$SCRDIR/adapters/primers/adapter${primer}_revcomp.fasta $WDIR/$SCRDIR/adapter3_revcomp.fasta
+      adapter5_lookup="all:all:UMI5RACENEB"
+      adapter3_lookup="all:all:UMI5RACENEB"
+      cat $WDIR/$SCRDIR/adapters/primers/adapter5multiplex.fasta > $WDIR/$SCRDIR/adapter5.fasta
+      cat $WDIR/$SCRDIR/adapters/primers/adapter${primer}.fasta >> $WDIR/$SCRDIR/adapter5.fasta
+      cat $WDIR/$SCRDIR/adapters/primers/adapter5multiplex_revcomp.fasta > $WDIR/$SCRDIR/adapter3.fasta
+      cat $WDIR/$SCRDIR/adapters/primers/adapter${primer}_revcomp.fasta >> $WDIR/$SCRDIR/adapter3.fasta
       ;;
     *)
       error "unrecognized library prep method $libraryMethod in setup! Check that the dataset name follows correct nomenclature."
@@ -393,7 +393,7 @@ function fastxStep (){
 
   elif [[ "$libraryMethod" == multiplexNEB ]] && [[ "$libraryType" =~ ^(HINGE|HINGENano)$ ]]; then
     echo "Working with a $libraryMethod $libraryType library adaptored with the NEB kit ..."
-    fwdprimer='HsRhIgGhinge'
+    fwdprimer='multiplex'
     echo "Fixing orientation of the reverse reads in the symmetrically adaptored HINGE dataset..."
     echo "Forward primer name: \"$fwdprimer\"; reverse primer name: \"$revprimer\""
     $zcat $WDIR/$OUT_cutadapt/$DATANAME.trim2.fastq.gz | fastq_to_fasta -Q 33 -v -n -o $DATANAME.trimmed.noN.fasta
