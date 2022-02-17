@@ -16,6 +16,10 @@ function error () {
   exit 1
 }
 
+function time_msg () {
+  echo "[$(date +%T%Z)]...$1"
+}
+
 # function: clean directory
 # arguments: none
 function cleanWorkingDirectory () {
@@ -102,8 +106,8 @@ function checkTargetNewer (){
 # function: compressIntermediates
 # arguments: none
 function compressIntermediates () {
-  echo "################################################################"
-  echo "Compressing the intermediate FASTQ and *.igblast_out files ..."
+  echo "####################################################################"
+  time_msg "Compressing the intermediate FASTQ and *.igblast_out files ..."
 
   find $WDIR -name "*.fastq" -exec gzip -f -9 {} \; -exec echo -n "." \;
   find $WDIR -name "*.*blast_out" -exec gzip -f -9 {} \; -exec echo -n "." \;
@@ -114,7 +118,7 @@ function compressIntermediates () {
 # arguments: none
 function prepareArchive () {
   compressIntermediates
-	echo "Compressing the fasta files ..."
+	time_msg "Compressing the fasta files ..."
   find $WDIR -name "*.fasta" -exec gzip -f -v -9 {} \; 2>&1 | tee -a $WDIR/archiving.log
 }
 
@@ -186,7 +190,7 @@ function selectAdaptors (){
   fi
 
   ## copying the adapter files for cutadapt
-  echo "Setup: Using $adapter5 and $adapter3 as adapters."
+  time_msg "Setup: Using $adapter5 and $adapter3 as adapters."
   cp $WDIR/$SCRDIR/adapters/$adapter5 $WDIR/$SCRDIR/adapter5.conf
   cp $WDIR/$SCRDIR/adapters/$adapter3 $WDIR/$SCRDIR/adapter3.conf
 }
@@ -198,9 +202,9 @@ function plotRunQuality () {
   file2=$2
 
   ## Generate sequencing run statistics and graphs
-  echo "Generating stats for $file1"
+  time_msg "Generating stats for $file1"
   Rscript $WDIR/$SCRDIR/readQualityPlot.R --inputFile=$WDIR/$INDIR/$file1 --outputFile=$WDIR/$OUTDIR/$file1.quality.pdf
-  echo "Generating stats for $file2"
+  time_msg "Generating stats for $file2"
   Rscript $WDIR/$SCRDIR/readQualityPlot.R --inputFile=$WDIR/$INDIR/$file2 --outputFile=$WDIR/$OUTDIR/$file2.quality.pdf
 
   ## accounting start
@@ -220,7 +224,7 @@ function FLASHstep (){
   cd $WDIR/$OUT_flash || { error "Error: FLASH output directory not accessible!"; }
   if [[ "${DATASET_libraryType:?}" =~ ^(variableNano|HINGENano)$ ]] || ([[ "${DATASET_libraryMethod:?}" == UMI5RACENEB ]] && [[ "$DATASET_libraryType" == HINGE ]]); then
     flash -M $maxoverlap -m $minoverlap -x $mismatchDensity -z $file1 $file2 --output-prefix=out1
-    echo "Generating a stitched FASTQ from the paired reads."
+    time_msg "Generating a stitched FASTQ from the paired reads."
     gunzip -c $file1 > temp1.fastq
     gunzip -c $file2 > temp2.fastq
     perl $WDIR/$SCRDIR/fastq_stitch.pl temp1.fastq temp2.fastq ${READ_stitch:?} > out.extendedFrags.fastq
@@ -251,8 +255,8 @@ function asymmetricSequencingExtension (){
 # arguments:
 function cutadaptStep (){
   cd $WDIR/$OUT_cutadapt || { error "Error: Cutadapt output directory not accessible!"; }
-  echo "#####################"
-  echo "Running cutadapt for 5' end..."
+  echo "####################################"
+  time_msg "Running cutadapt for 5' end..."
   args=$(tr "\n" " " <$WDIR/$SCRDIR/adapter5.conf)
   if [[ "$DATASET_libraryMethod" == multiplexNEB ]]; then
     if [[ "$DATASET_libraryType" =~ ^(HINGE|HINGENano)$ ]]; then
@@ -277,8 +281,8 @@ function cutadaptStep (){
   fi
   unset args
 
-  echo "#####################"
-  echo "Running cutadapt for 3' end..."
+  echo "####################################"
+  time_msg "Running cutadapt for 3' end..."
   args=$(tr "\n" " " <$WDIR/$SCRDIR/adapter3.conf)
   if [[ "$DATASET_libraryMethod" == multiplexNEB ]] && [[ "$DATASET_libraryType" =~ ^(HINGE|HINGENano)$ ]]; then
     echo "Hinge dataset from NEB-adaptored library: trimming the reverse primer sequences ..."
@@ -315,8 +319,8 @@ function fastxStep (){
   post='CTTG{1,7}'
 
   cd $WDIR/$OUT_fastxtk || { error "Error: FASTx output directory not accessible!"; }
-  echo "#####################"
-  echo "Performing dataset collapsing steps ..."
+  echo "#################################################"
+  time_msg "Performing dataset collapsing steps ..."
 
   if [[ "$libraryMethod" == UMI5RACE ]]; then
     echo "Working with a $libraryMethod $libraryType library with directional adaptoring ..."
@@ -325,7 +329,7 @@ function fastxStep (){
     perl $WDIR/$SCRDIR/fasta_barcode_count.pl $DATANAME.trimmed.fasta $preamble $barcode $post> $DATANAME.trimmed.bc_annot.fasta
     python3 $WDIR/$SCRDIR/fasta_barcode_consensus.py $DATANAME.trimmed.bc_annot.fasta > $DATANAME.trimmed.bc_annot.consensus.fastq
     fastq_to_fasta -Q 33 -v -n -i $DATANAME.trimmed.bc_annot.consensus.fastq -o $DATANAME.trimmed.bc_annot.consensus.fasta
-    echo "Consensus building collapsed the set to" "`${grep:?} -c ">" $DATANAME.trimmed.bc_annot.consensus.fasta`" "sequences."
+    time_msg "Consensus building collapsed the set to" "`${grep:?} -c ">" $DATANAME.trimmed.bc_annot.consensus.fasta`" "sequences."
     echo "Unrecognized barcodes found in" "`$grep -c "barcode=unknown" $DATANAME.trimmed.bc_annot.fasta`" "sequences."
     echo "Cleaning up the basecalls ..."
     fastx_clipper -v -a N -i $DATANAME.trimmed.bc_annot.consensus.fasta -o $DATANAME.trimmed.bc_annot.consensus.noN.fasta
@@ -347,6 +351,8 @@ function fastxStep (){
     cutadapt -q 15 -o $DATANAME.trim1.bc_annot.ordered_q15.fastq $DATANAME.trim1.bc_annot.ordered.fastq
     echo "Calculating consensus sequences for UMI-barcoded read clusters ..."
     python3 $WDIR/$SCRDIR/fastq_barcode_consensus.py $DATANAME.trim1.bc_annot.ordered_q15.fastq --min_size 2 > $DATANAME.trim1.bc_annot.ordered.cons.fastq
+    time_msg "Consensus building collapsed the set to" "`${grep:?} -c "^@MIG" $DATANAME.trim1.bc_annot.ordered.cons.fastq`" "sequences."
+    echo "Unrecognized barcodes found in" "`$grep -c "barcode=unknown" $DATANAME.trim1.bc_annot.fastq`" "sequences."
     perl $WDIR/$SCRDIR/fastq_barcode_consensus_interleaved_filter.pl $DATANAME.trim1.bc_annot.ordered.cons.fastq > $DATANAME.trim1.bc_annot.ordered.cons.interleaved.fastq
 
     echo "Performing FLASH to rebuild the amplicons from UMI cluster consensus sequences."
@@ -379,7 +385,7 @@ function fastxStep (){
         echo "Determine the consensus sequence..."
        python3 $WDIR/$SCRDIR/fasta_barcode_consensus.py $DATANAME.trimmed.orient.bc_annot.3prime.fasta > $DATANAME.trimmed.orient.bc_annot.3prime.consensus.fastq
        fastq_to_fasta -Q 33 -v -n -i $DATANAME.trimmed.orient.bc_annot.3prime.consensus.fastq -o $DATANAME.trimmed.orient.bc_annot.3prime.consensus.fasta
-       echo "Consensus building collapsed the set to" "`$grep -c ">" $DATANAME.trimmed.orient.bc_annot.3prime.consensus.fasta`" "sequences."
+       time_msg "Consensus building collapsed the set to" "`$grep -c ">" $DATANAME.trimmed.orient.bc_annot.3prime.consensus.fasta`" "sequences."
        echo "Unrecognized barcodes found in" "`$grep -c "barcode=unknown" $DATANAME.trimmed.orient.bc_annot.3prime.fasta`" "sequences."
        cp $DATANAME.trimmed.orient.bc_annot.3prime.consensus.fasta $WDIR/$OUT_igblast/input.fasta
     else
@@ -387,7 +393,7 @@ function fastxStep (){
        echo "Determine the consensus sequence..."
        python3 $WDIR/$SCRDIR/fasta_barcode_consensus.py $DATANAME.trimmed.orient.bc_annot.fasta > $DATANAME.trimmed.orient.bc_annot.consensus.fastq
        fastq_to_fasta -Q 33 -v -n -i $DATANAME.trimmed.orient.bc_annot.consensus.fastq -o $DATANAME.trimmed.orient.bc_annot.consensus.fasta
-       echo "Consensus building collapsed the set to" "`$grep -c ">" $DATANAME.trimmed.orient.bc_annot.consensus.fasta`" "sequences."
+       time_msg "Consensus building collapsed the set to" "`$grep -c ">" $DATANAME.trimmed.orient.bc_annot.consensus.fasta`" "sequences."
        echo "Unrecognized barcodes found in" "`$grep -c "barcode=unknown" $DATANAME.trimmed.orient.bc_annot.fasta`" "sequences."
        # needed for proper MIG accounting
        cp $DATANAME.trimmed.orient.bc_annot.fasta $DATANAME.trimmed.orient.bc_annot.ordered.fasta
@@ -404,7 +410,7 @@ function fastxStep (){
     echo "Dropping the amplicons with unknown orientation..."
     $grep -v ";orient_unk" $DATANAME.trimmed.noN.orient.fasta| $grep -A1 ">" | $grep -v "\-\-" > $DATANAME.trimmed.noN.orient.clean.fasta
     echo "Uknown orientations (primer recognition problems) encountered: `$grep -c ";orient_unk"  $DATANAME.trimmed.noN.orient.fasta` times"
-    echo "Running fastx_collapser ..."
+    time_msg "Running fastx_collapser ..."
     fastx_collapser -Q 33 -v -i $DATANAME.trimmed.noN.orient.clean.fasta -o $DATANAME.trimmed.noN.collapsed.fasta
     cp $DATANAME.trimmed.noN.collapsed.fasta $WDIR/$OUT_igblast/input.fasta
 
@@ -440,8 +446,8 @@ function IgBLASTstep (){
 
   cd $WDIR/$OUT_igblast || { error "Error: IgBLAST output directory not accessible!"; }
 
-  echo "#####################"
-  echo "Running igblastn ..."
+  echo "###############################"
+  time_msg "Running igblastn ..."
 
   # UMI's are too far upstream of constant-region target sequences to yield enough
   #    variable-region sequence for a meaningful IgBLAST run ... skip this
@@ -478,7 +484,7 @@ function IgBLASTstep (){
              -show_translation \
              -query $f \
              -num_threads $IGBLAST_numthreads -out $DATANAME.${g}.igblast_out
-    echo "[$(date +%T)]...Completed IgBLAST annotation of $f"
+    time_msg "Completed IgBLAST annotation of $f"
   done
 
   igblast_ENDTIME=$(date +%s)
@@ -495,8 +501,8 @@ function IgBLASToutputProcessing (){
 
   cd $WDIR/$OUT_igblast || { error "Error: IgBLAST output directory not accessible!"; }
 
-  echo "##############################"
-  echo "Processing igblastn output..."
+  echo "######################################"
+  time_msg "Processing igblastn output..."
 
   # UMI's are too far upstream of constant-region target sequences to yield enough
   #    variable-region sequence for a meaningful IgBLAST run ... skip this
@@ -511,7 +517,7 @@ function IgBLASToutputProcessing (){
     if [[ -f $DATANAME.${g}.igblast_out ]]; then
       python3 $WDIR/$SCRDIR/igblast-out_harvester.py $DATANAME.${g}.igblast_out $f \
       >> $DATANAME.igblast.fasta
-      echo "[$(date +%T)]...Completed transferring annotations from $DATANAME.${g}.igblast_out"
+      time_msg "Completed transferring annotations from $DATANAME.${g}.igblast_out"
       rm $f # clean up the split-up fasta files
     else
       echo "Error!!! The file $DATANAME.${g}.igblast_out is missing. IgBLAST annotation was not completed."
@@ -588,7 +594,7 @@ function hingeProcessingStep (){
   cd $WDIR/$OUT_igblast || { error "Error: IgBLAST output directory not accessible!"; }
 
   echo "########################################"
-  echo "Processing hinge data ..."
+  time_msg "Processing hinge data ..."
   echo "Assigning subtype using blastn ..."
   echo "BLAST options: $species sequences ... Using $BLAST_species database."
   echo "commandline: "
@@ -612,13 +618,13 @@ function hingeProcessingStep (){
            -outfmt "7 qseqid sseqid pident qlen slen length qcovs bitscore evalue" \
            -max_target_seqs 3 \
            -out $DATANAME.igblast.prod.scrub.clon.${g}.blast_out
-    echo "[$(date +%T)]...Completed HINGE BLAST annotation of $f"
+    time_msg "Completed HINGE BLAST annotation of $f"
   done
   blastn_ENDTIME=$(date +%s)
   echo "The hinge blast step took $[$blastn_ENDTIME - $blastn_STARTTIME] seconds to complete."
 
-  echo "#################################"
-  echo "Parsing the hinge blast output..."
+  echo "########################################"
+  time_msg "Parsing the hinge blast output..."
 
   for f in ${DATANAME}_igblast_prod_scrub_clon_fasta_split.*; do
     g=${f#*.}
@@ -626,7 +632,7 @@ function hingeProcessingStep (){
       perl $WDIR/$SCRDIR/hinge_blast_out_harvester.pl \
            $DATANAME.igblast.prod.scrub.clon.${g}.blast_out $f \
       >> $DATANAME.igblast.prod.scrub.clon.subclass.fasta
-      echo "[$(date +%T)]...Completed transferring annotations from $DATANAME.${g}.igblast_out"
+      time_msg "Completed transferring annotations from $DATANAME.${g}.igblast_out"
       rm $f # clean up the split-up fasta files
     else
       echo "Error!!! The file $DATANAME.${g}.igblast_out is missing. IgBLAST annotation was not completed."
