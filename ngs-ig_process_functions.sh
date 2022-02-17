@@ -254,9 +254,12 @@ function cutadaptStep (){
   echo "#####################"
   echo "Running cutadapt for 5' end..."
   args=$(tr "\n" " " <$WDIR/$SCRDIR/adapter5.conf)
-  if [[ "$DATASET_libraryMethod" == multiplexNEB ]] && [[ "$DATASET_libraryType" =~ ^(HINGE|HINGENano)$ ]]; then
+  if [[ "$DATASET_libraryMethod" == multiplexNEB ]]; then
+    if [[ "$DATASET_libraryType" =~ ^(HINGE|HINGENano)$ ]]; then
+      args="$args --no-trim"
+    fi
     echo "Hinge dataset from NEB-adaptored library: preserving the forward (multiplex) primer sequences ..."
-    cutadapt $args --no-trim -m $MINLENGTH -M $MAXLENGTH --trim-n -o $DATANAME.trim1.fastq.gz $WDIR/$OUT_flash/out.extendedFrags.fastq.gz
+    cutadapt $args -m $MINLENGTH -M $MAXLENGTH --trim-n -o $DATANAME.trim1.fastq.gz $WDIR/$OUT_flash/out.extendedFrags.fastq.gz
   elif [[ "$DATASET_libraryMethod" == UMI5RACEASYM ]]; then
     echo "Asymmetric sequencing dataset: looking for primers in Read1."
     cutadapt $args --trim-n -o $DATANAME.trim1.fastq.gz $WDIR/$INDIR/$DATA1
