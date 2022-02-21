@@ -17,10 +17,12 @@ declare -A validTissues=(["spleen"]=1 ["marrow"]=1 ["blood"]=1 ["node"]=1 ["PBMC
 declare -A primers5=(["all:all:UMI5RACE"]="adapter5UMI.conf"
   ["all:all:UMI5RACEASYM"]="adapterUMIasym.conf"
   ["all:all:UMI5RACENEB"]="adapter5UMIasym.conf"
+  ["all:all:multiplexNEB"]="adapter5multiplexNEB.conf"
 )
 
 declare -A primers3=(["all:all:UMI5RACEASYM"]="adapterUMIasym.conf"
   ["all:all:UMI5RACENEB"]="adapter3UMIasym.conf"
+  ["all:all:multiplexNEB"]="adapter3multiplexNEB.conf"
 )
 
 ####################################################################

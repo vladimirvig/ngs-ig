@@ -6,7 +6,7 @@ DATASET_DATE=20200826
 TARGET="/programs/deployment/data/${DATASET_DATE}/${DATASET}"
 
 cd $TARGET || { echo "Error: working directory not accessible!"; exit 1; }
-rsync -av /programs/* $TARGET/scripts --exclude deployment --exclude .git*
+rsync -av /programs/pipeline/* $TARGET/scripts --exclude deployment --exclude .git*
 bash $TARGET/scripts/ngs-ig_process.sh process 2>&1 |tee ./run.log
 
 mkdir -p /mnt/${DATASET_DATE}_${DATASET}_out

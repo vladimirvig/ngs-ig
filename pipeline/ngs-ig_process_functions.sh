@@ -329,8 +329,8 @@ function fastxStep (){
     perl $WDIR/$SCRDIR/fasta_barcode_count.pl $DATANAME.trimmed.fasta $preamble $barcode $post> $DATANAME.trimmed.bc_annot.fasta
     python3 $WDIR/$SCRDIR/fasta_barcode_consensus.py $DATANAME.trimmed.bc_annot.fasta > $DATANAME.trimmed.bc_annot.consensus.fastq
     fastq_to_fasta -Q 33 -v -n -i $DATANAME.trimmed.bc_annot.consensus.fastq -o $DATANAME.trimmed.bc_annot.consensus.fasta
-    time_msg "Consensus building collapsed the set to" "`${grep:?} -c ">" $DATANAME.trimmed.bc_annot.consensus.fasta`" "sequences."
-    echo "Unrecognized barcodes found in" "`$grep -c "barcode=unknown" $DATANAME.trimmed.bc_annot.fasta`" "sequences."
+    time_msg "Consensus building collapsed the set to `${grep:?} -c ">" $DATANAME.trimmed.bc_annot.consensus.fasta` sequences."
+    echo "Unrecognized barcodes found in `$grep -c "barcode=unknown" $DATANAME.trimmed.bc_annot.fasta` sequences."
     echo "Cleaning up the basecalls ..."
     fastx_clipper -v -a N -i $DATANAME.trimmed.bc_annot.consensus.fasta -o $DATANAME.trimmed.bc_annot.consensus.noN.fasta
     ## clean up the input for igblast while retaining the UMI collapse
@@ -351,8 +351,8 @@ function fastxStep (){
     cutadapt -q 15 -o $DATANAME.trim1.bc_annot.ordered_q15.fastq $DATANAME.trim1.bc_annot.ordered.fastq
     echo "Calculating consensus sequences for UMI-barcoded read clusters ..."
     python3 $WDIR/$SCRDIR/fastq_barcode_consensus.py $DATANAME.trim1.bc_annot.ordered_q15.fastq --min_size 2 > $DATANAME.trim1.bc_annot.ordered.cons.fastq
-    time_msg "Consensus building collapsed the set to" "`${grep:?} -c "^@MIG" $DATANAME.trim1.bc_annot.ordered.cons.fastq`" "sequences."
-    echo "Unrecognized barcodes found in" "`$grep -c "barcode=unknown" $DATANAME.trim1.bc_annot.fastq`" "sequences."
+    time_msg "Consensus building collapsed the set to `${grep:?} -c "^@MIG" $DATANAME.trim1.bc_annot.ordered.cons.fastq` sequences."
+    echo "Unrecognized barcodes found in `$grep -c "barcode=unknown" $DATANAME.trim1.bc_annot.fastq` sequences."
     perl $WDIR/$SCRDIR/fastq_barcode_consensus_interleaved_filter.pl $DATANAME.trim1.bc_annot.ordered.cons.fastq > $DATANAME.trim1.bc_annot.ordered.cons.interleaved.fastq
 
     echo "Performing FLASH to rebuild the amplicons from UMI cluster consensus sequences."
@@ -385,16 +385,16 @@ function fastxStep (){
         echo "Determine the consensus sequence..."
        python3 $WDIR/$SCRDIR/fasta_barcode_consensus.py $DATANAME.trimmed.orient.bc_annot.3prime.fasta > $DATANAME.trimmed.orient.bc_annot.3prime.consensus.fastq
        fastq_to_fasta -Q 33 -v -n -i $DATANAME.trimmed.orient.bc_annot.3prime.consensus.fastq -o $DATANAME.trimmed.orient.bc_annot.3prime.consensus.fasta
-       time_msg "Consensus building collapsed the set to" "`$grep -c ">" $DATANAME.trimmed.orient.bc_annot.3prime.consensus.fasta`" "sequences."
-       echo "Unrecognized barcodes found in" "`$grep -c "barcode=unknown" $DATANAME.trimmed.orient.bc_annot.3prime.fasta`" "sequences."
+       time_msg "Consensus building collapsed the set to `$grep -c ">" $DATANAME.trimmed.orient.bc_annot.3prime.consensus.fasta` sequences."
+       echo "Unrecognized barcodes found in `$grep -c "barcode=unknown" $DATANAME.trimmed.orient.bc_annot.3prime.fasta` sequences."
        cp $DATANAME.trimmed.orient.bc_annot.3prime.consensus.fasta $WDIR/$OUT_igblast/input.fasta
     else
        # This sequence should be properly extended.
        echo "Determine the consensus sequence..."
        python3 $WDIR/$SCRDIR/fasta_barcode_consensus.py $DATANAME.trimmed.orient.bc_annot.fasta > $DATANAME.trimmed.orient.bc_annot.consensus.fastq
        fastq_to_fasta -Q 33 -v -n -i $DATANAME.trimmed.orient.bc_annot.consensus.fastq -o $DATANAME.trimmed.orient.bc_annot.consensus.fasta
-       time_msg "Consensus building collapsed the set to" "`$grep -c ">" $DATANAME.trimmed.orient.bc_annot.consensus.fasta`" "sequences."
-       echo "Unrecognized barcodes found in" "`$grep -c "barcode=unknown" $DATANAME.trimmed.orient.bc_annot.fasta`" "sequences."
+       time_msg "Consensus building collapsed the set to `$grep -c ">" $DATANAME.trimmed.orient.bc_annot.consensus.fasta` sequences."
+       echo "Unrecognized barcodes found in `$grep -c "barcode=unknown" $DATANAME.trimmed.orient.bc_annot.fasta` sequences."
        # needed for proper MIG accounting
        cp $DATANAME.trimmed.orient.bc_annot.fasta $DATANAME.trimmed.orient.bc_annot.ordered.fasta
        cp $DATANAME.trimmed.orient.bc_annot.consensus.fasta $WDIR/$OUT_igblast/input.fasta
@@ -488,7 +488,7 @@ function IgBLASTstep (){
   done
 
   igblast_ENDTIME=$(date +%s)
-  echo "The igblast step took $[$igblast_ENDTIME - $igblast_STARTTIME] seconds to complete."
+  echo "The igblastn step took $[$igblast_ENDTIME - $igblast_STARTTIME] seconds to complete."
 }
 
 # function: the igblast output processing
