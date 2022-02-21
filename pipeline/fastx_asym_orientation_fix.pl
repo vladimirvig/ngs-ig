@@ -23,8 +23,7 @@ if ( scalar @ARGV == 3 || scalar @ARGV == 4 ) {
     }
 }
 else {
-    die
-"Usage: perl fastq_asym_orientation_fix.pl trimmed_annotated.fastq/a FWD_primer_name REV_primer_name [DEBUG]\n";
+    die "Usage: perl fastq_asym_orientation_fix.pl trimmed_annotated.fastq/a FWD_primer_name REV_primer_name [DEBUG]\n";
 }
 
 sub reverse_complement    # read in a sequence and return reverse-complement
@@ -79,8 +78,7 @@ while ( defined( $header = <$infile> ) ) {
     $orientation = "orient_unk";
 
     if ( $header !~ m|^(.*);([^;]*);([^;]*)$|x ) {
-        die
-"Error: unrecognized file format. Make sure the primer annotation is present.\n";
+        die "Error: unrecognized file format. Make sure the primer annotation is present.\n";
     }
     else {
         $readLabel = $1;

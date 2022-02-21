@@ -101,7 +101,7 @@ If you provide your own scripts directory (e.g., to avoid rebuilding a container
 
 Live container access (for manual operation or data re-processing):
 
-    docker run -ti --rm --mount type=bind,src=abs_path_to_data_directory,dst=/mnt ngs-ig:latest bash
+    docker run -it --rm --mount type=bind,src=abs_path_to_data_directory,dst=/mnt ngs-ig:latest bash
 
 ## _(Stand-alone operation) software requirements:_
 
@@ -124,7 +124,7 @@ In addition to shell (bash) and scripting language support (perl), the pipeline 
 1.  Name a top-level project directory with the run date and create a subdirectory for each library.
 2.  Name the library subdirectory according to the naming conventions described below.
 3.  deposit gzipped FASTQ files for forward and reverse reads into a subdirectory named `input`, within the library subdirectory.
-4.  Copy all the pipeline scripts into the subdirectory named `scripts`. You may leave out the `deployment` subdirectory, which is only needed for the Docker image build step
+4.  Copy the contents of the `pipeline` directory into an empty subdirectory named `scripts`.
 5.  Edit the `ngs-ig_pipeline_alias.sh` file to point to the correct locations of the installations of required software (see above).
 6.  Edit the `LabSpecific.sh` script to add custom values.
 7.  Add the appropriate oligonucleotide sequences to the scripts/adapters/primers directory and/or edit the `*.conf` files found in scripts/adapters.
