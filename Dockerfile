@@ -49,9 +49,9 @@ RUN mkdir -p $ARCH $DATA $IMPORTS \
              $DEPS/cutadapt $DEPS/fastx/src
 
 # Home system doesn't allow github
-# RUN https://github.com/agordon/fastx_toolkit/releases/download/0.0.14/fastx_toolkit-0.0.14.tar.bz2 \
-#   | tar -xjC $TEMP/fastx/src
-RUN tar xjf $ARCH/fastx_toolkit-0.0.14.tar.bz2 -C $DEPS/fastx/src
+RUN curl -SL https://github.com/agordon/fastx_toolkit/releases/download/0.0.14/fastx_toolkit-0.0.14.tar.bz2 \
+   | tar -xjC $DEPS/fastx/src
+#RUN tar xjf $ARCH/fastx_toolkit-0.0.14.tar.bz2 -C $DEPS/fastx/src
 
 # move the stashed executables into final locations
 RUN mv $TEMP/*blast $TEMP/flash $DEPS
@@ -62,7 +62,7 @@ WORKDIR $DEPLOYMENT
 RUN bash ngs-ig_deploy.sh
 
 # clean-up
-RUN echo "### Removing the archives." && rm -rv $ARCH/* && \
+RUN echo "### Removing the archives." && rm -rv $ARCH && \
     echo "### Checking the locations of new binaries ..." && \
     which flash cutadapt fastx_collapser igblastn blastn R && \
     echo "### Done."
