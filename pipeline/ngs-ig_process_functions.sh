@@ -8,8 +8,8 @@
 # function: error handling
 # arguments: error message
 function error () {
-  echo "Error detected: $1"
-  echo "Exiting the pipeline..."
+  printf "Error detected: $1\n"
+  printf "[$(date +%T%Z)]...Exiting the pipeline...\n"
   if [ -f $WDIR/running ]; then
     mv -f $WDIR/running $WDIR/error
   fi
@@ -17,7 +17,7 @@ function error () {
 }
 
 function time_msg () {
-  echo "[$(date +%T%Z)]...$1"
+  printf "[$(date +%T%Z)]...$1\n"
 }
 
 # function: clean directory
@@ -415,7 +415,7 @@ function fastxStep (){
     cp $DATANAME.trimmed.noN.collapsed.fasta $WDIR/$OUT_igblast/input.fasta
 
   else
-    error "This pipeline doesn't know how to treat this library: \n$libraryType prepared using $libraryMethod"
+    error "This pipeline doesn't know how to treat this library: \n\t$libraryType prepared using $libraryMethod"
   fi
   ## accounting
   buildReadAccountingSummary fastxStepAcct
