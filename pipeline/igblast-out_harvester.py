@@ -136,7 +136,7 @@ def parse_igblast_block(file, line):
 
     while not end_block_flag and line:
         # skip all empty lines
-        while re.search(r'^\s*$', line):
+        while re.search(r'^\s*\n', line):
             line = file.readline()
 
         match_result = re.search(r'Length=(\d+)', line)
@@ -145,7 +145,7 @@ def parse_igblast_block(file, line):
 
             line = file.readline()
             # skip all empty lines
-            while re.search(r'^\s*$', line):
+            while re.search(r'^\s*\n', line):
                 line = file.readline()
 
         match_result = re.search(r'rearrangement summary for query sequence', line)
@@ -157,7 +157,7 @@ def parse_igblast_block(file, line):
 
             line = file.readline()
             # skip all empty lines
-            while re.search(r'^\s*$', line):
+            while re.search(r'^\s*\n', line):
                 line = file.readline()
 
         match_result = re.search(r'junction details based on top germline gene', line)
@@ -173,7 +173,7 @@ def parse_igblast_block(file, line):
 
             line = file.readline()
             # skip all empty lines
-            while re.search(r'^\s*$', line):
+            while re.search(r'^\s*\n', line):
                 line = file.readline()
 
         match_result = re.search(r'region sequence details', line)
@@ -193,7 +193,7 @@ def parse_igblast_block(file, line):
 
             line = file.readline()
             # skip all empty lines
-            while re.search(r'^\s*$', line):
+            while re.search(r'^\s*\n', line):
                 line = file.readline()
 
         match_result = re.search(r'^Alignment summary', line)
@@ -201,13 +201,21 @@ def parse_igblast_block(file, line):
         if match_result:
             while not end_table_flag and line:
                 line = file.readline()
-                match_result = re.search(r'^([^\t]+)\t(\S+)\t(\S+)\t(\d+)\t\S+\t\S+\t\S+\t(\d+\.?\d*)', line)
+                match_result = re.search(r'^([^\t]+)\t(\S+)\t(\S+)\t(\S+)\t\S+\t\S+\t\S+\t(\S+)', line)
                 if match_result:
                     alignment_tbl_data['rowname'] = match_result.group(1)
                     alignment_tbl_data['from'] = match_result.group(2)
                     alignment_tbl_data['to'] = match_result.group(3)
-                    alignment_tbl_data['length'] = int(match_result.group(4))
-                    alignment_tbl_data['pct_id'] = float(match_result.group(5))
+
+                    if re.match(r'\d+',match_result.group(4)):
+                        alignment_tbl_data['length'] = int(match_result.group(4))
+                    else:
+                        alignment_tbl_data['length'] = 0
+
+                    if re.match(r'\d+\.?\d*',match_result.group(5)):
+                        alignment_tbl_data['pct_id'] = float(match_result.group(5))
+                    else:
+                        alignment_tbl_data['pct_id'] = 0
 
                     if re.search(r'^FR1', alignment_tbl_data['rowname']):
                         result['trunc_flags'][0] = 0
@@ -223,7 +231,10 @@ def parse_igblast_block(file, line):
                         result['trunc_flags'][5] = 0
                     elif alignment_tbl_data['rowname'] == 'Total':
                         result['perc_ident'] = alignment_tbl_data['pct_id']
-                        result['cov'] = 100 * alignment_tbl_data['length'] / result['q_length']
+                        if result['q_length']:
+                            result['cov'] = 100 * alignment_tbl_data['length'] / result['q_length']
+                        else:
+                            result['cov'] = 0
                         end_table_flag = 1
                     else:
                         sys.exit('Error interpreting alignment at ' + result['query'] + ' summary.')
