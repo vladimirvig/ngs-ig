@@ -35,4 +35,4 @@ echo  "### Installing R packages ..."
 R -e 'install.packages(c("here","optparse","ggplot2","BiocManager","png","jpeg","reshape2","latticeExtra","matrixStats","bitops","Rcpp","RcppParallel","RCurl","hwriter"))' |tee -a $DEPS/Rpackages_install.log
 R -e 'BiocManager::install("dada2")'  |tee -a $DEPS/Rpackages_install.log
 
-#R CMD INSTALL -l /usr/local/lib/R/site-library $ARCH/Rpackages/* |tee -a $DEPS/Rpackages_install.log
+## R CMD INSTALL -l /usr/local/lib/R/site-library $ARCH/Rpackages/* |tee -a $DEPS/Rpackages_install.log

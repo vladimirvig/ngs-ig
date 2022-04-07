@@ -48,14 +48,12 @@ COPY . /programs
 RUN mkdir -p $ARCH $DATA $IMPORTS \
              $DEPS/cutadapt $DEPS/fastx/src
 
-# Home system doesn't allow github
 RUN curl -SL https://github.com/agordon/fastx_toolkit/releases/download/0.0.14/fastx_toolkit-0.0.14.tar.bz2 \
    | tar -xjC $DEPS/fastx/src
-#RUN tar xjf $ARCH/fastx_toolkit-0.0.14.tar.bz2 -C $DEPS/fastx/src
+## RUN tar xjf $ARCH/fastx_toolkit-0.0.14.tar.bz2 -C $DEPS/fastx/src
 
 # move the stashed executables into final locations
 RUN mv $TEMP/*blast $TEMP/flash $DEPS
-# RUN mv $TEMP/fastx/* $DEPS/fastx/src
 
 # execute the remaining setup
 WORKDIR $DEPLOYMENT
