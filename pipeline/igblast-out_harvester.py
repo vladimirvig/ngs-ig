@@ -329,7 +329,7 @@ def compose_fasta_block(file, filename, line, igblast_data_dict):
         readframe = -readframe
 
     # generate the translation for the junction sequence
-    if len(igblast_data['rearr']) and igblast_data_dict['cdr3_aa'] != '0null0':
+    if len(igblast_data_dict['rearr']) and igblast_data_dict['cdr3_aa'] != '0null0':
         for idx in range(0,3):
             rearr_aa = translate(igblast_data_dict['rearr'][idx:])
             if re.search(re.escape(rearr_aa), igblast_data_dict['cdr3_aa']):
