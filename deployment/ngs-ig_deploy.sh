@@ -12,7 +12,16 @@ echo "### Building FASTX-toolkit..."
 cd $DEPS/fastx/src/fastx_toolkit-0.0.14 || { echo "Error: Could not find fastx source directory!"; exit 1; }
 patch $DEPS/fastx/src/fastx_toolkit-0.0.14/src/fasta_formatter/fasta_formatter.cpp $DEPLOYMENT/fastx-toolkit-gcc7-patch.txt
 patch $DEPS/fastx/src/fastx_toolkit-0.0.14/src/libfastx/fastx.h $DEPLOYMENT/fastx_patch.txt
-./configure --prefix=$DEPS/fastx |tee -a $DEPS/fastx_configure.log
+
+if [ "$(uname -sm)" = "Linux aarch64" ]; then
+    echo "Configuring fastx for 'Linux aarch64'."
+    ./configure --prefix=$DEPS/fastx --build=aarch64-unknown-linux-gnu|tee -a $DEPS/fastx_configure.log
+# elif [ "$(uname -sm)" = "Linux x86_64" ]; then
+#     ./configure --prefix=$DEPS/fastx |tee -a $DEPS/fastx_configure.log
+else
+    ./configure --prefix=$DEPS/fastx |tee -a $DEPS/fastx_configure.log
+fi
+
 make |tee -a $DEPS/fastx_make.log
 make install |tee -a $DEPS/fastx_install.log
 echo "### Done."
