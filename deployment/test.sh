@@ -3,9 +3,12 @@
 
 DATASET="Mm-BALB-p6wk-spleen-UMI5RACENEB-variableNano-vv874pool876-IgG"
 DATASET_DATE=20200826
-TARGET="/programs/deployment/data/${DATASET_DATE}/${DATASET}"
+# TARGET="/programs/deployment/data/${DATASET_DATE}/${DATASET}" # TODO: update locations
+TARGET="/mnt/test_output/${DATASET_DATE}/${DATASET}"
 
+mkdir -p $TARGET
 cd $TARGET || { echo "Error: working directory not accessible!"; exit 1; }
+rsync -av /programs/deployment/data/${DATASET_DATE}/${DATASET}/* .
 rsync -av /programs/pipeline/* $TARGET/scripts --exclude deployment --exclude .git*
 bash $TARGET/scripts/ngs-ig_process.sh process 2>&1 |tee ./run.log
 

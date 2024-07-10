@@ -84,284 +84,197 @@ def rev_comp(seq):
     table = seq.maketrans(complement)
     return seq.translate(table)
 
-def parse_igblast_block(file, line):
-    '''
-    read from the IgBLAST output file and store data
-    1st argument -- filehandle for reading inputFile
-    2nd argument -- first line in the block ("Query...")
-    returns hash containing (keys):
-      ['query']
-      ['q_length']
-      ['gene_usage']
-      ['rearr']
-      ['cdr3_nt']      ... CDR3 nucleotide sequence
-      ['cdr3_bounds']  array
-      ['cdr3_aa']      ... CDR3 amino acid sequence
-      ['perc_ident']
-      ['cov']
-      ['trunc_flags'] array
-      ['fwk_bounds']  array
-      ['q_rev_flag']
-    '''
-
-    end_table_flag        = 0
-    end_block_flag        = 0
-    aa_set                = r'[ACDEFGHIKLMNPQRSTVWXY\*]'
-    nt_set                = r'[ACGTN]'
-    alignment_tbl_data    = {}
-    result                = {}
-
-    result['q_length']    = 0
-    result['gene_usage']  = ''
-    result['rearr']       = ''
-    result['cdr3_aa']     = '0null0'
-    result['cdr3_nt']     = '0null0'
-    result['perc_ident']  = 0
-    result['cov']         = 0
-
-    # positions for Fr1, CDR1, Fr2, CDR2, Fr3, CDR3, J-family assignment
-    result['trunc_flags'] = [1, 1, 1, 1, 1, 1, 1 ]
-    result['cdr3_bounds'] = [0, 0]
-    result['fwk_bounds']  = []
-    result['q_rev_flag']  = 0
-
-    match_result = re.search(r'^Query=\s(\S*)', line)
-
-    if match_result is None:
-        sys.exit('Error: invald start of IgBLAST output section at ' + line + '.')
-
-    result['query'] = match_result.group(1)
-
-    line = file.readline() # initial read
-
-    while not end_block_flag and line:
-        # skip all empty lines
-        while re.search(r'^\s*\n', line):
-            line = file.readline()
-
-        match_result = re.search(r'Length=(\d+)', line)
-        if match_result:
-            result['q_length'] = int(match_result.group(1))
-
-            line = file.readline()
-            # skip all empty lines
-            while re.search(r'^\s*\n', line):
-                line = file.readline()
-
-        match_result = re.search(r'rearrangement summary for query sequence', line)
-        if match_result:
-            line = file.readline()
-            result['gene_usage'] = line.strip()
-            if re.search(r'\t\-\t?[^\t]*$', line):
-                result['q_rev_flag'] = 1
-
-            line = file.readline()
-            # skip all empty lines
-            while re.search(r'^\s*\n', line):
-                line = file.readline()
-
-        match_result = re.search(r'junction details based on top germline gene', line)
-        if match_result:
-            line = file.readline()
-            # the last field denotes presence of J chain
-            if re.search(r'\tN\/A\s*$', line) is None:
-                result['trunc_flags'][6] = 0
-
-            # This may indicate overlapping sequences; proceed with caution.
-            line = re.sub(r'N\/A|\(|\)|\t', '', line)
-            result['rearr'] = line.strip()
-
-            line = file.readline()
-            # skip all empty lines
-            while re.search(r'^\s*\n', line):
-                line = file.readline()
-
-        match_result = re.search(r'region sequence details', line)
-        if match_result:
-            line = file.readline()
-            match_result = re.search(r'^CDR3\s+(' + nt_set \
-                            + r'+)\s+(' + aa_set \
-                            + r'*)\t(\d+)\t(\d+)', line)
-            if match_result is None:
-                sys.exit('Error: invalid IgBLAST output format (CDR3 region); check data for '\
-                            + result['query'])
-
-            result['cdr3_nt'] = match_result.group(1)
-            result['cdr3_aa']  = match_result.group(2) if match_result.group(2) else '0null0'
-            result['cdr3_bounds'][0] = int(match_result.group(3))
-            result['cdr3_bounds'][1] = int(match_result.group(4))
-
-            line = file.readline()
-            # skip all empty lines
-            while re.search(r'^\s*\n', line):
-                line = file.readline()
-
-        match_result = re.search(r'^Alignment summary', line)
-        # Framework alignment summary table; expected to end with the "Total" line
-        if match_result:
-            while not end_table_flag and line:
-                line = file.readline()
-                match_result = re.search(r'^([^\t]+)\t(\S+)\t(\S+)\t(\S+)\t\S+\t\S+\t\S+\t(\S+)', line)
-                if match_result:
-                    alignment_tbl_data['rowname'] = match_result.group(1)
-                    alignment_tbl_data['from'] = match_result.group(2)
-                    alignment_tbl_data['to'] = match_result.group(3)
-
-                    if re.match(r'\d+',match_result.group(4)):
-                        alignment_tbl_data['length'] = int(match_result.group(4))
-                    else:
-                        alignment_tbl_data['length'] = 0
-
-                    if re.match(r'\d+\.?\d*',match_result.group(5)):
-                        alignment_tbl_data['pct_id'] = float(match_result.group(5))
-                    else:
-                        alignment_tbl_data['pct_id'] = 0
-
-                    if re.search(r'^FR1', alignment_tbl_data['rowname']):
-                        result['trunc_flags'][0] = 0
-                    elif re.search(r'^CDR1', alignment_tbl_data['rowname']):
-                        result['trunc_flags'][1] = 0
-                    elif re.search(r'^FR2', alignment_tbl_data['rowname']):
-                        result['trunc_flags'][2] = 0
-                    elif re.search(r'^CDR2', alignment_tbl_data['rowname']):
-                        result['trunc_flags'][3] = 0
-                    elif re.search(r'^FR3', alignment_tbl_data['rowname']):
-                        result['trunc_flags'][4] = 0
-                    elif re.search(r'^CDR3', alignment_tbl_data['rowname']):
-                        result['trunc_flags'][5] = 0
-                    elif alignment_tbl_data['rowname'] == 'Total':
-                        result['perc_ident'] = alignment_tbl_data['pct_id']
-                        if result['q_length']:
-                            result['cov'] = 100 * alignment_tbl_data['length'] / result['q_length']
-                        else:
-                            result['cov'] = 0
-                        end_table_flag = 1
-                    else:
-                        sys.exit('Error interpreting alignment at ' + result['query'] + ' summary.')
-
-                # collect framework bounds for reading frame determination
-                if alignment_tbl_data['rowname'] != 'Total':
-                    result['fwk_bounds'].append(int(alignment_tbl_data['from']))
-                    result['fwk_bounds'].append(int(alignment_tbl_data['to']))
-
-        match_result = re.search(re.escape(r'***** No hits found *****'), line)
-        if match_result:
-            result['gene_usage'] = 'invalid_query_seq'
-            result['rearr']      = ''
-            result['cov']        = 0
-            result['perc_ident'] = 0
-
-        match_result = re.search(r'Effective search space used', line)
-        if match_result:
-            end_block_flag = 1
-
-        line = file.readline()
-
-    return result
-
-def compose_fasta_block(file, filename, line, igblast_data_dict):
+def compose_fasta_block(keys, data):
     '''
     read a FASTA entry, determine the reading frame from igblast_data_dict,
         compose the new description line, and return the FASTA block
-    1st argument -- file handle for input FASTA file
-    2nd argument -- filename for input FASTA file
-    3rd argument -- first line of input FASTA file
-    4th argument -- igblast_data_dict
+    1st argument -- header from the AIRR table
+    2nd argument -- data line from the AIRR table\
     '''
     # initialize
     result      = {}
     readframe   = 0
-    rearr_aa    = '0null0'
+
+    # positions for Fr1, CDR1, Fr2, CDR2, Fr3, CDR3, J-segment annotation (if any)
+    trunc_flags = [1,1,1,1,1,1,1]
+    fwr_ends = [0,0,0,0,0,0,0]
+    
     translation = ''
     aa_set      = r'[ACDEFGHIKLMNPQRSTVWXY\*]'
-
-    if re.search(r'^>' + igblast_data_dict['query'] + '.*', line) is None:
-        sys.exit('Error at ' + igblast_data_dict['query'] + ' FASTA entry retrieval.')
-
-    result['query_id'] = line.strip()
-    result['query_id'] = re.sub(r'^>', '', result['query_id'])
-
-    # grab the sequence from the FASTA file
-    line = file.readline()
-    if line:
-        result['query_seq'] = line.strip()
+    
+    if len(keys) != len(data):
+        sys.exit('Error reading the AIRR table due to field number mismatch at: ' + data[0])
+        
+    entry_dict = dict(zip(keys, data))
+    
+    # store the sequence for output
+    result['query_seq'] = entry_dict['sequence']
+    
+    # compose the identifier line from annotations stored in entry_dict
+    result['query_id'] = entry_dict['sequence_id'] + '\t'
+    
+    # V/D/J assignments
+    if entry_dict['v_call'] != '':
+        result['query_id'] = result['query_id'] + entry_dict['v_call'] + '\t'
     else:
-        sys.exit('Error: cannot retrieve the sequence for\n\t' + \
-          result['query_id'] + '\n\tfrom ' + filename)
+        result['query_id'] = result['query_id'] + 'N/A' + '\t'
+    if entry_dict['d_call'] != '':
+        result['query_id'] = result['query_id'] + entry_dict['d_call'] + '\t'
+    else:
+        result['query_id'] = result['query_id'] + 'N/A' + '\t'
+    if entry_dict['j_call'] != '':
+        result['query_id'] = result['query_id'] + entry_dict['j_call'] + '\t'
+    else:
+        result['query_id'] = result['query_id'] + 'N/A' + '\t'
+    if entry_dict['locus'] != '':
+        result['query_id'] = result['query_id'] + entry_dict['locus'] + '\t'
+    else:
+        result['query_id'] = result['query_id'] + 'invalid_query_seq' + '\t'
 
-    if len(igblast_data_dict['fwk_bounds']) > 1:
-        readframe = igblast_data_dict['fwk_bounds'][1] % 3 + 1
+    # miscelaneous annotations (stop codons, productive status, frame-shifts, etc.)
+    if entry_dict['stop_codon'] == 'F':
+        result['query_id'] = result['query_id'] + 'No' + '\t'
+    elif entry_dict['stop_codon'] == 'T':
+        result['query_id'] = result['query_id'] + 'Yes' + '\t'
+    else:
+        result['query_id'] = result['query_id'] + 'Unknown' + '\t'
+    if entry_dict['vj_in_frame'] == 'F':
+        result['query_id'] = result['query_id'] + 'Out-of-frame' + '\t'
+    elif entry_dict['vj_in_frame'] == 'T':
+        result['query_id'] = result['query_id'] + 'In-frame' + '\t'
+    else:
+        result['query_id'] = result['query_id'] + 'Unknown' + '\t'
+    if entry_dict['productive'] == 'F':
+        result['query_id'] = result['query_id'] + 'No' + '\t'
+    elif entry_dict['productive'] == 'T':
+        result['query_id'] = result['query_id'] + 'Yes' + '\t'
+    else:
+        result['query_id'] = result['query_id'] + 'Unknown' + '\t'
+    if entry_dict['rev_comp'] == 'F':
+        result['query_id'] = result['query_id'] + '+' + '\t'
+    elif entry_dict['rev_comp'] == 'T':
+        result['query_id'] = result['query_id'] + '-' + '\t'
+    else:
+        result['query_id'] = result['query_id'] + 'Unknown' + '\t'
+    if entry_dict['v_frameshift'] == 'F':
+        result['query_id'] = result['query_id'] + 'No' + '\t'
+    elif entry_dict['v_frameshift'] == 'T':
+        result['query_id'] = result['query_id'] + 'Yes' + '\t'
+    else:
+        result['query_id'] = result['query_id'] + 'Unknown' + '\t'
 
-    # another possibility that isn't always available:
-    # readframe = str((result['cdr3_bounds'][0]-1)%3+1)
+    # Determine which regions are present for the truncation annotation
+    if entry_dict['fwr1'] != '':
+        trunc_flags[0] = 0
+        fwr_ends[0] = int(entry_dict['fwr1_end'])
+    if entry_dict['cdr1'] != '':
+        trunc_flags[1] = 0
+        fwr_ends[1] = int(entry_dict['cdr1_end'])
+    if entry_dict['fwr2'] != '':
+        trunc_flags[2] = 0
+        fwr_ends[2] = int(entry_dict['fwr2_end'])
+    if entry_dict['cdr2'] != '':
+        trunc_flags[3] = 0
+        fwr_ends[3] = int(entry_dict['cdr2_end'])
+    if entry_dict['fwr3'] != '':
+        trunc_flags[4] = 0
+        fwr_ends[4] = int(entry_dict['fwr3_end'])
+    if entry_dict['cdr3'] != '':
+        trunc_flags[5] = 0
+        fwr_ends[5] = int(entry_dict['cdr3_end'])
+    if entry_dict['fwr4'] != '':
+        trunc_flags[6] = 0
+        fwr_ends[6] = int(entry_dict['fwr4_end'])
+    
+    if   trunc_flags[0] \
+      or trunc_flags[1] \
+      or trunc_flags[2] \
+      or trunc_flags[3] \
+      or trunc_flags[4]:
+        result['query_id'] = result['query_id'] + 'Vtruncated.' + \
+          ''.join(map(str,trunc_flags)) + '\t'
+    # elif trunc_flags[6]:
+    #     result['query_id'] = result['query_id'] + 'Jtruncated.'  + '\t' \
+    #       ''.join(map(str,trunc_flags))
+    else:
+        result['query_id'] = result['query_id'] + 'Vintact' + '\t'
+    
+    if entry_dict['junction'] != '':        
+        result['query_id'] = result['query_id'] + 'junctnn:' + entry_dict['junction'] + '\t'
+    else:
+        result['query_id'] = result['query_id'] + 'junctnn:' + '0null0' + '\t'
 
-    # if the sequence is determined to be "reversed", determine the revcomp
-    working_seq = rev_comp(result['query_seq']) \
-        if igblast_data_dict['q_rev_flag'] else result['query_seq']
-
-    # translate the sequence, possibly reverse-complement
-    if readframe:
-        translation = translate(working_seq[readframe - 1:])
-
-        # fix the translation for cases when only a portion of the sequence
-        #   was used in the igblast annotation
-        if igblast_data_dict['cdr3_aa'] != '0null0' \
-          and re.search(re.escape(igblast_data_dict['cdr3_aa']), translation) is None:
-            readframe = 3
-            while readframe >= 1:
-                translation = translate(working_seq[readframe - 1 :])
-                if re.search(re.escape(igblast_data_dict['cdr3_aa']), translation):
-                    break
-                readframe = readframe - 1
-
+    if entry_dict['junction_aa'] != '':
+        result['query_id'] = result['query_id'] + 'junctaa:' + entry_dict['junction_aa'] + '\t'
+    else:
+        result['query_id'] = result['query_id'] + 'junctaa:' + '0null0' + '\t'
+    
+    # determine reading frame
+    for value in fwr_ends:
+        if value:
+            # if readframe and readframe != value % 3 + 1:
+            #     sys.exit('Conflict among readframes in :' + result['query_id'] + ' ' + ' '.join(map(str,fwr_ends)))
+            readframe = value % 3 + 1
+ 
+    # determine translation
+    if readframe != 0:
+        translation = translate(entry_dict['sequence'][readframe-1:])
+    else:
+        translation = '0null0'
+    
     # obtain context residues for the cdr3_aa
-    if igblast_data_dict['cdr3_aa'] != '0null0':
+    if entry_dict['cdr3_aa'] != '':
         match_result = re.search(aa_set + r'+(' + aa_set + r'{3}' + \
-                       re.escape(igblast_data_dict['cdr3_aa']) + \
+                       re.escape(entry_dict['cdr3_aa']) + \
                        aa_set + r'{2})', translation)
         if match_result:
-            igblast_data_dict['cdr3_aa'] = match_result.group(1)
+            cdr3_aa = match_result.group(1)
         else:
-            igblast_data_dict['cdr3_aa'] = '0null0'  # TODO, see below
-            # sys.exit('Error: cannot obtain CDR3 amino acid sequence context.')
+            cdr3_aa = '0null0'
+    else: 
+        cdr3_aa = '0null0'
+    result['query_id'] = result['query_id'] + 'CDR3aa:' + cdr3_aa + '\t'
 
-    if igblast_data_dict['q_rev_flag']:
-        readframe = -readframe
-
-    # generate the translation for the junction sequence
-    if len(igblast_data_dict['rearr']) and igblast_data_dict['cdr3_aa'] != '0null0':
-        for idx in range(0,3):
-            rearr_aa = translate(igblast_data_dict['rearr'][idx:])
-            if re.search(re.escape(rearr_aa), igblast_data_dict['cdr3_aa']):
-                break
-
-        if re.search(re.escape(rearr_aa), translation) is None:
-            rearr_aa = '0null0'
-
-    ### result construction start
-    result['query_id'] = '>' + result['query_id'] + '\t' \
-                             + igblast_data_dict['gene_usage'] + '\t'
-    if   igblast_data_dict['trunc_flags'][0] \
-      or igblast_data_dict['trunc_flags'][1] \
-      or igblast_data_dict['trunc_flags'][2] \
-      or igblast_data_dict['trunc_flags'][3] \
-      or igblast_data_dict['trunc_flags'][4]:
-        result['query_id'] = result['query_id'] + 'Vtruncated.' + \
-          ''.join(map(str,igblast_data_dict['trunc_flags']))
-    elif igblast_data_dict['trunc_flags'][6]:
-        result['query_id'] = result['query_id'] + 'Jtruncated.' + \
-          ''.join(map(str,igblast_data_dict['trunc_flags']))
+    # declare reading frame
+    result['query_id'] = result['query_id'] + 'frame:' + str(readframe) + '\t'
+    
+    # declare percent covered by the alignment
+    if entry_dict['sequence_alignment'] != '':
+        seq_aln = entry_dict['sequence_alignment'].replace('-','')
+        pcov = 100 * len(seq_aln) / len(entry_dict['sequence'])
+        result['query_id'] = result['query_id'] + 'pcov:' + str(round(pcov,1)) + '\t'
     else:
-        result['query_id'] = result['query_id'] + 'Vintact'
+        result['query_id'] = result['query_id'] + 'pcov:' + '0null0' + '\t'
+        
+    # declare percent identity for the V-segment
+    if entry_dict['v_identity'] != '':
+        identity = round(float(entry_dict['v_identity']),1)
+    else:
+        identity = '0null0'
+    result['query_id'] = result['query_id'] + 'pid:' + str(identity) + '\t'
+ 
+    # declare the tranlation
+    result['query_id'] = result['query_id'] + 'transl:' + translation
 
-    result['query_id'] = result['query_id'] + '\t' + \
-      'junctnn:' + igblast_data_dict['rearr'] + '\t' + \
-      'junctaa:' + rearr_aa + '\t' + \
-      'CDR3aa:' + igblast_data_dict['cdr3_aa'] + '\t' + \
-      'frame:' + str(readframe) + '\t' + \
-      'pcov:' + f"{igblast_data_dict['cov']:.1f}" + '\t' + \
-      'pid:' + f"{igblast_data_dict['perc_ident']:.1f}" + '\t' + \
-      'transl:' + translation
+    ## resulting convention:
+    # 1: 'sequence_id'
+    # 2: 'v_call'
+    # 3: 'd_call'
+    # 4: 'j_call'
+    # 5: 'locus'
+    # 6: 'stop_codon'
+    # 7: 'vj_in_frame'
+    # 8: 'productive'
+    # 9: 'rev_comp'
+    # 10: 'v_frameshift'
+    # 11: 'Vintact'/'Vtruncated'
+    # 12: 'junction'
+    # 13: 'junction_aa'
+    # 14: 'CDR3aa'
+    # 15: 'readframe'
+    # 16: 'pcov'
+    # 17: 'pid'
+    # 18: 'transl'
 
     return result
 
@@ -370,30 +283,28 @@ def compose_fasta_block(file, filename, line, igblast_data_dict):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('igblastOut_name', \
-        help='Filename for the IgBLAST output (e.g., "source.igblast_out")')
-    parser.add_argument('fasta_name', \
-        help='Filename for the FASTA data set (e.g., "source.fasta")')
+        help='Filename for the IgBLAST output (e.g., "source.igblast_out.airr.tsv")')
     #parser.add_argument('--debug', help='output debug information', action='store_true')
     args = parser.parse_args()
+    keys = []
 
 try:
-    with open(args.igblastOut_name, encoding="utf8") as igblast, \
-         open(args.fasta_name, encoding="utf8") as fasta:
+    with open(args.igblastOut_name, encoding="utf8") as igblast:
         in_line = igblast.readline()
 
         while in_line:
-            # print("0")
-            if re.search(r'^Query=\s', in_line):
-                igblast_data = parse_igblast_block(igblast, in_line)
-                in_line = fasta.readline()
-                annotated_fasta = compose_fasta_block(fasta, \
-                  args.fasta_name, in_line, igblast_data)
-                print(annotated_fasta['query_id'])
+            if re.search(r'^sequence_id', in_line):
+                keys = in_line.split("\t")
+            else:
+                data = in_line.split("\t")
+                
+                # igblast_data = parse_igblast_block(igblast, in_line)
+                # in_line = fasta.readline()
+                annotated_fasta = compose_fasta_block(keys, data)
+                print('>' + annotated_fasta['query_id'])
                 print(annotated_fasta['query_seq'])
             in_line = igblast.readline()
 
 except FileNotFoundError:
     if not exists(args.igblastOut_name):
         sys.exit('File ' + args.igblastOut_name + ' was not found!')
-    else:
-        sys.exit('File ' + args.fasta_name + ' was not found!')

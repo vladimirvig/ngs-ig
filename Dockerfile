@@ -1,4 +1,4 @@
-FROM r-base:4.1.0
+FROM r-base:4.4.1
 
 # Updates of the system and installation of additional prerequisites.
 RUN apt-get update && apt-get install -y \
@@ -31,15 +31,17 @@ ENV TEMP=/tmp/deployment
 # Stash downloadable archives in a way compatible with docker caching
 RUN mkdir -p $TEMP/flash $TEMP/igblast
 WORKDIR /archives
-RUN curl -SL https://ftp.ncbi.nih.gov/blast/executables/igblast/release/1.18.0/ncbi-igblast-1.18.0-x64-linux.tar.gz \
+RUN curl -SL https://ftp.ncbi.nih.gov/blast/executables/igblast/release/1.22.0/ncbi-igblast-1.22.0-x64-linux.tar.gz \
   | tar -xzC $TEMP/igblast --strip-components 1
-RUN curl -SL http://ccb.jhu.edu/software/FLASH/FLASH-1.2.11.tar.gz \
+# RUN curl -SL http://ccb.jhu.edu/software/FLASH/FLASH-1.2.11.tar.gz \
+#   | tar -xzC $TEMP/flash --strip-components 1
+RUN curl -SL https://github.com/martin-steinegger/FLASH/archive/refs/heads/master.tar.gz \
   | tar -xzC $TEMP/flash --strip-components 1
 
 # Optional NCBI-Blast archive
 RUN if [ $BLAST_INSTALL = 'Y' ]; then \
   mkdir -p $TEMP/blast; \
-  curl -SL https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.11.0/ncbi-blast-2.11.0+-x64-linux.tar.gz \
+  curl -SL https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.15.0/ncbi-blast-2.15.0+-x64-linux.tar.gz \
   | tar -xzC $TEMP/blast --strip-components 1; fi
 
 COPY . /programs

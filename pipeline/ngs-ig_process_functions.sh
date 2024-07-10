@@ -10,12 +10,14 @@
 function error () {
   printf "Error detected: $1\n"
   printf "[$(date +%T%Z)]...Exiting the pipeline...\n"
-  if [ -f $WDIR/running ]; then
-    mv -f $WDIR/running $WDIR/error
+  if [ -f $WDIR/running.txt ]; then
+    mv -f $WDIR/running.txt $WDIR/error.txt
   fi
   exit 1
 }
 
+# function: timestamp message
+# arguments: none
 function time_msg () {
   printf "[$(date +%T%Z)]...$1\n"
 }
@@ -27,11 +29,11 @@ function cleanWorkingDirectory () {
   echo "Deleting processing subdirectories ..."
   rm -rf 0*
   echo "Deleting pipeline status files ..."
-  rm -f "done" "error" "running"
+  rm -f "done.txt" "error.txt" "running.txt"
   echo "Deleting SampleManifest.txt..."
   rm -f SampleManifest.txt
-  echo "Deleting run.log ..."
-  rm -f run.log
+  echo "Deleting run.log and error.log ..."
+  rm -f run.log  error.log
   echo "Deleting archiving.log"
   rm -f archiving.log
   echo "Deleting adapter selections..."
@@ -43,8 +45,8 @@ function cleanWorkingDirectory () {
 # arguments: none
 function initialize () {
   cd $WDIR || { echo "Error: working directory not accessible!"; exit 1; }
-  echo "run start:" > $WDIR/running
-  date >> $WDIR/running
+  echo "run start:" > $WDIR/running.txt
+  date >> $WDIR/running.txt
 
   mkdir $OUTDIR
   if [[ $? -ne 0 ]]; then
@@ -107,10 +109,10 @@ function checkTargetNewer (){
 # arguments: none
 function compressIntermediates () {
   echo "####################################################################"
-  time_msg "Compressing the intermediate FASTQ and *.igblast_out files ..."
+  time_msg "Compressing the intermediate FASTQ and *.*blast_out* files ..."
 
   find $WDIR -name "*.fastq" -exec gzip -f -9 {} \; -exec echo -n "." \;
-  find $WDIR -name "*.*blast_out" -exec gzip -f -9 {} \; -exec echo -n "." \;
+  find $WDIR -name "*.*blast_out*" ! -name "*.gz" -exec gzip -f -9 {} \; -exec echo -n "." \;
   echo ""
 }
 
@@ -222,7 +224,8 @@ function FLASHstep (){
   file2=$5
 
   cd $WDIR/$OUT_flash || { error "Error: FLASH output directory not accessible!"; }
-  if [[ "${DATASET_libraryType:?}" =~ ^(variableNano|HINGENano)$ ]] || ([[ "${DATASET_libraryMethod:?}" == UMI5RACENEB ]] && [[ "$DATASET_libraryType" == HINGE ]]); then
+  if [[ "${DATASET_libraryType:?}" =~ ^(variableNano|HINGENano)$ ]] || \
+      ([[ "${DATASET_libraryMethod:?}" == UMI5RACENEB ]] && [[ "$DATASET_libraryType" == HINGE ]]); then
     flash -M $maxoverlap -m $minoverlap -x $mismatchDensity -z $file1 $file2 --output-prefix=out1
     time_msg "Generating a stitched FASTQ from the paired reads."
     gunzip -c $file1 > temp1.fastq
@@ -261,8 +264,10 @@ function cutadaptStep (){
   if [[ "$DATASET_libraryMethod" == multiplexNEB ]]; then
     if [[ "$DATASET_libraryType" =~ ^(HINGE|HINGENano)$ ]]; then
       args="$args --no-trim"
+      echo "Hinge dataset from NEB-adaptored library: preserving the forward (multiplex) primer sequences ..."
+    else
+      echo "NEB-adaptored multiplex library: trimming the forward primer sequences ..."
     fi
-    echo "Hinge dataset from NEB-adaptored library: preserving the forward (multiplex) primer sequences ..."
     cutadapt $args -m $MINLENGTH -M $MAXLENGTH --trim-n -o $DATANAME.trim1.fastq.gz $WDIR/$OUT_flash/out.extendedFrags.fastq.gz
   elif [[ "$DATASET_libraryMethod" == UMI5RACEASYM ]]; then
     echo "Asymmetric sequencing dataset: looking for primers in Read1."
@@ -284,8 +289,12 @@ function cutadaptStep (){
   echo "####################################"
   time_msg "Running cutadapt for 3' end..."
   args=$(tr "\n" " " <$WDIR/$SCRDIR/adapter3.conf)
-  if [[ "$DATASET_libraryMethod" == multiplexNEB ]] && [[ "$DATASET_libraryType" =~ ^(HINGE|HINGENano)$ ]]; then
-    echo "Hinge dataset from NEB-adaptored library: trimming the reverse primer sequences ..."
+  if [[ "$DATASET_libraryMethod" == multiplexNEB ]]; then
+    if [[ "$DATASET_libraryType" =~ ^(HINGE|HINGENano)$ ]]; then
+      echo "Hinge dataset from NEB-adaptored library: trimming the reverse primer sequences ..."
+      else
+      echo "NEB-adaptored multiplex library: trimming the reverse primer sequences ..."
+    fi
     cutadapt $args -m $MINLENGTH -M $MAXLENGTH --trim-n -o $DATANAME.trim2.fastq.gz $DATANAME.trim1.fastq.gz
   elif [[ "$DATASET_libraryMethod" == UMI5RACEASYM ]]; then
     echo "Asymmetric sequencing dataset: looking for primers in Read2."
@@ -446,6 +455,11 @@ function IgBLASTstep (){
 
   cd $WDIR/$OUT_igblast || { error "Error: IgBLAST output directory not accessible!"; }
 
+  if [[ $FRESH -eq 0 ]]; then
+    find . -name "*.igblast_out.airr.tsv.gz" -exec gunzip -v {} \;
+    find . -name "input_fasta_split*" -exec rm {} \;
+  fi
+
   echo "###############################"
   time_msg "Running igblastn ..."
 
@@ -453,7 +467,7 @@ function IgBLASTstep (){
   #    variable-region sequence for a meaningful IgBLAST run ... skip this
   if [[ "$libraryMethod" == UMI5RACENEB ]] && [[ "$libraryType" =~ ^(HINGE|HINGENano)$ ]]; then
     echo "UMI-tagged HINGE amplicons should not have variable-region sequences ... Skipping the igblastn step."
-    touch $DATANAME.aa.igblast_out
+    touch $DATANAME.aa.igblast_out.airr.tsv
     return 0
   fi
 
@@ -464,29 +478,41 @@ function IgBLASTstep (){
   echo "###          -germline_db_D $IGDATA/database/${IGBLAST_species}_gl_D"
   echo "###          -germline_db_J $IGDATA/database/${IGBLAST_species}_gl_J"
   echo "###          -auxiliary_data $IGDATA/optional_file/${IGBLAST_species}_gl.aux"
-  echo "###          -show_translation"
   echo "###          -query input.fasta"
   echo "###          -num_threads ${IGBLAST_numthreads:?}"
-  echo "###          -out $DATANAME.igblast_out"
+  echo "###          -outfmt 19"
+  echo "###          -out $DATANAME.igblast_out.airr.tsv"
 
   echo "Splitting the input file into 100,000-sequence blocks."
   split --verbose --lines=200000 input.fasta input_fasta_split.
 
   igblast_STARTTIME=$(date +%s)
+  touch igblast_fasta_file_started.txt
 
+  # process each file if the last job didn't reach there (or if a new job)
   for f in input_fasta_split.*; do
+    if [[ $( cat igblast_fasta_file_started.txt ) == "" ]] || \
+       [[ $( cat igblast_fasta_file_started.txt ) == $f ]]; then
+      # record the processing start in case of intrruption
+      echo $f > igblast_fasta_file_started.txt
     g=${f#*.}
     igblastn -organism $IGBLAST_species \
              -germline_db_V $IGDATA/database/${IGBLAST_species}_gl_V \
              -germline_db_D $IGDATA/database/${IGBLAST_species}_gl_D \
              -germline_db_J $IGDATA/database/${IGBLAST_species}_gl_J \
              -auxiliary_data $IGDATA/optional_file/${IGBLAST_species}_gl.aux \
-             -show_translation \
              -query $f \
-             -num_threads $IGBLAST_numthreads -out $DATANAME.${g}.igblast_out
+             -num_threads $IGBLAST_numthreads \
+             -outfmt 19 \
+             -out $DATANAME.${g}.igblast_out.airr.tsv
     time_msg "Completed IgBLAST annotation of $f"
+    echo "" > igblast_fasta_file_started.txt
+    else
+      time_msg "Skipping $f IgBLAST processing."
+    fi
   done
 
+  rm igblast_fasta_file_started.txt
   igblast_ENDTIME=$(date +%s)
   echo "The igblastn step took $[$igblast_ENDTIME - $igblast_STARTTIME] seconds to complete."
 }
@@ -514,15 +540,20 @@ function IgBLASToutputProcessing (){
 
   for f in input_fasta_split.*; do
     g=${f#*.}
-    if [[ -f $DATANAME.${g}.igblast_out ]]; then
-      python3 $WDIR/$SCRDIR/igblast-out_harvester.py $DATANAME.${g}.igblast_out $f \
+    if [[ -f $DATANAME.${g}.igblast_out.airr.tsv ]]; then
+      python3 $WDIR/$SCRDIR/igblast-out_harvester.py $DATANAME.${g}.igblast_out.airr.tsv \
       >> $DATANAME.igblast.fasta
-      time_msg "Completed transferring annotations from $DATANAME.${g}.igblast_out"
-      rm $f # clean up the split-up fasta files
+      time_msg "Completed transferring annotations from $DATANAME.${g}.igblast_out.airr.tsv"
+      # rm $f # clean up the split-up fasta files
     else
-      echo "Error!!! The file $DATANAME.${g}.igblast_out is missing. IgBLAST annotation was not completed."
+      echo "Error!!! The file $DATANAME.${g}.igblast_out.airr.tsv is missing. IgBLAST annotation was not completed."
     fi
   done
+  # check the number of input and output sequences
+  input_check=`$grep -c "^>" input.fasta`
+  output_check=`$grep -c "^>" $DATANAME.igblast.fasta`
+  echo "Input: input.fasta ... $input_check"
+  echo "Output: $DATANAME.igblast.fasta ... $output_check"
 
   # remove improperly truncated sequences and those containing stop codons in the CDR3aa (there may still be stops in the rest of the sequence!!!)
   if [[ "$libraryType" =~ ^(HINGE|HINGENano)$ ]]; then
@@ -538,13 +569,13 @@ function IgBLASToutputProcessing (){
 
   echo "Removing the invalid (or unrecognized) sequences..."
   if [[ "$chain" =~ ^(IgM|IgG)$ ]];  then
-    $grep -v "CDR3aa:0null0" $DATANAME.igblast.prod.fasta | $grep -A 1 "\t\VH\t" | $grep -v "\-\-" > $DATANAME.igblast.prod.scrub.fasta
+    $grep -v "CDR3aa:0null0" $DATANAME.igblast.prod.fasta | $grep -A 1 "\tIGH\t" | $grep -v "\-\-" > $DATANAME.igblast.prod.scrub.fasta
   elif [[ "$chain" == IgK ]]
   then
-    $grep -v "CDR3aa:0null0" $DATANAME.igblast.prod.fasta | $grep -A 1 "\t\VK\t" | $grep -v "\-\-" > $DATANAME.igblast.prod.scrub.fasta
+    $grep -v "CDR3aa:0null0" $DATANAME.igblast.prod.fasta | $grep -A 1 "\tIGK\t" | $grep -v "\-\-" > $DATANAME.igblast.prod.scrub.fasta
   elif [[ "$chain" == IgL ]]
   then
-    $grep -v "CDR3aa:0null0" $DATANAME.igblast.prod.fasta | $grep -A 1 "\t\VL\t" | $grep -v "\-\-" > $DATANAME.igblast.prod.scrub.fasta
+    $grep -v "CDR3aa:0null0" $DATANAME.igblast.prod.fasta | $grep -A 1 "\tIGL\t" | $grep -v "\-\-" > $DATANAME.igblast.prod.scrub.fasta
   fi
 
   echo "Generating a clonotype dictionary..."
@@ -632,10 +663,10 @@ function hingeProcessingStep (){
       perl $WDIR/$SCRDIR/hinge_blast_out_harvester.pl \
            $DATANAME.igblast.prod.scrub.clon.${g}.blast_out $f \
       >> $DATANAME.igblast.prod.scrub.clon.subclass.fasta
-      time_msg "Completed transferring annotations from $DATANAME.${g}.igblast_out"
+      time_msg "Completed transferring annotations from $DATANAME.${g}.igblast_out.airr.tsv"
       rm $f # clean up the split-up fasta files
     else
-      echo "Error!!! The file $DATANAME.${g}.igblast_out is missing. IgBLAST annotation was not completed."
+      echo "Error!!! The file $DATANAME.${g}.igblast_out.airr.tsv is missing. IgBLAST annotation was not completed."
     fi
   done
 

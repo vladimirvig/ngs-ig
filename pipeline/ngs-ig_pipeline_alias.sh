@@ -74,7 +74,8 @@ fi
 
 ## Checking tools
 testFlag=0
-echo -n "OS................... "; uname -a | cut -d " " -f1
+echo -n "OS................... "; uname -s
+echo -n "host................. "; uname -n
 echo -n "Number of CPUs....... "; nproc
 echo    "bash................. $BASH_VERSION"
 echo -n "perl................. "; perl -v | grep "version"; if [[ $? -ne 0 ]]; then testFlag=1; fi

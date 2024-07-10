@@ -156,7 +156,7 @@ echo "libraryType: $DATASET_libraryType"
 ## initialize the output directory structure ##
 ###############################################
 if [[ $FRESH -ne 0 ]]; then
-  if [[ -f $WDIR/running ]]; then
+  if [[ -f $WDIR/running.txt ]]; then
     echo "Already running a process! This was probably started by mistake."
     exit 1
   fi
@@ -183,87 +183,101 @@ fi
 ##################
 #### FLASH step ##
 ##################
-checkExist "$WDIR/$OUT_flash/out.extendedFrags.fastq*"
-if [[ $? -ne 1 ]]; then
+# checkExist "$WDIR/$OUT_flash/out.extendedFrags.fastq*"
+# if [[ $? -ne 1 ]]; then
+if [[ -f $WDIR/$OUT_flash/flash_stage_complete.txt ]]; then
+  echo "Skipping step ... amplicons reconstructed during previous run."
+else
   FLASHstep ${FLASH_maxoverlap:?} ${FLASH_minoverlap:?} ${FLASH_mismatch_density:?} \
     "$WDIR/$INDIR/$DATA1" "$WDIR/$INDIR/$DATA2"
-else
-  echo "Skipping step ... amplicons reconstructed during previous run."
+  touch $WDIR/$OUT_flash/flash_stage_complete.txt
 fi
 
 ###################
 ## CUTADAPT step ##
 ###################
-checkTargetNewer "$WDIR/$OUT_flash/out.extendedFrags.fastq*" "$WDIR/$OUT_cutadapt/$DATANAME.trim2.fastq*"
-if [[ $? -ne 1 ]]; then
-  cutadaptStep
-else
+# checkTargetNewer "$WDIR/$OUT_flash/out.extendedFrags.fastq*" "$WDIR/$OUT_cutadapt/$DATANAME.trim2.fastq*"
+# if [[ $? -ne 1 ]]; then
+if [[ -f $WDIR/$OUT_cutadapt/cutadapt_stage_complete.txt ]]; then
   echo "Skipping step ... Primers trimmed during previous run."
+else
+  cutadaptStep
+  touch $WDIR/$OUT_cutadapt/cutadapt_stage_complete.txt
 fi
 
 ########################
 ## fastx-toolkit step ##
 ########################
-checkTargetNewer "$WDIR/$OUT_cutadapt/$DATANAME.trim2.fastq*" "$WDIR/$OUT_igblast/input.fasta"
-if [[ $? -ne 1 ]]; then
-  fastxStep $DATASET_libraryMethod $DATASET_primer $DATASET_libraryType
+# checkTargetNewer "$WDIR/$OUT_cutadapt/$DATANAME.trim2.fastq*" "$WDIR/$OUT_igblast/input*.fasta"
+# if [[ $? -ne 1 ]]; then
+if [[ -f $WDIR/$OUT_fastxtk/fastxtk_stage_complete.txt ]]; then
+echo "Skipping step ... Dataset converted and collapsed during previous run."
 else
-  echo "Skipping step ... Dataset converted and collapsed during previous run."
+  fastxStep $DATASET_libraryMethod $DATASET_primer $DATASET_libraryType
+  touch $WDIR/$OUT_fastxtk/fastxtk_stage_complete.txt  
 fi
 
 ###################
 ## igblastn step ##
 ###################
-checkTargetNewer "$WDIR/$OUT_igblast/input.fasta" "$WDIR/$OUT_igblast/$DATANAME.aa.igblast_out*"
-if [[ $? -ne 1 ]]; then
-  IgBLASTstep $DATASET_species
-else
+# checkTargetNewer "$WDIR/$OUT_igblast/input*.fasta" "$WDIR/$OUT_igblast/$DATANAME.aa.*igblast_out*"
+# if [[ $? -ne 1 ]]; then
+if [[ -f $WDIR/$OUT_igblast/igblast_stage_complete.txt ]]; then
   echo "Skipping step ... IgBLAST annotation completed during previous run."
+else
+  IgBLASTstep $DATASET_species
+  touch $WDIR/$OUT_igblast/igblast_stage_complete.txt
 fi
 
 ###############################
 ## IgBLAST output processing ##
 ###############################
-checkTargetNewer "$WDIR/$OUT_igblast/$DATANAME.aa.igblast_out*" "$WDIR/$OUT_igblast/$DATANAME.igblast.prod.scrub.clon.fasta*"
-if [[ $? -ne 1 ]]; then
-  if [ ! -f $WDIR/$OUT_igblast/${DATANAME}.aa.igblast_out ]; then
-    gunzip $WDIR/$OUT_igblast/${DATANAME}.*.igblast_out.gz
+# checkTargetNewer "$WDIR/$OUT_igblast/$DATANAME.aa.*igblast_out*" "$WDIR/$OUT_igblast/$DATANAME.igblast.prod.scrub.clon.fasta*"
+# if [[ $? -ne 1 ]]; then
+if [[ -f $WDIR/$OUT_igblast/igblast_output_processing_stage_complete.txt ]]; then
+  echo "Skipping step ... IgBLAST output processing completed during previous run."
+else
+  if [ ! -f $WDIR/$OUT_igblast/${DATANAME}.aa.igblast_out.airr.tsv ] && [ ! -f $WDIR/$OUT_igblast/${DATANAME}.aa.read1.igblast_out.airr.tsv ]; then
+    gunzip $WDIR/$OUT_igblast/${DATANAME}.*.igblast_out.airr.tsv.gz
     if [[ $? -ne 0 ]]; then
       error "could not locate the IgBLAST output for repeat processing."
     fi
   fi
   IgBLASToutputProcessing $DATASET_chain $DATASET_primer $DATASET_libraryMethod $DATASET_libraryType
-else
-  echo "Skipping step ... IgBLAST output processing completed during previous run."
+  touch $WDIR/$OUT_igblast/igblast_output_processing_stage_complete.txt
 fi
 
 ###########################
 ## Hinge processing step ##
 ###########################
 if [[ "$DATASET_libraryType" =~ ^(HINGE|HINGENano)$ ]] ; then
-  checkTargetNewer "$WDIR/$OUT_igblast/$DATANAME.igblast.prod.scrub.clon.fasta*" \
-    "$WDIR/$OUT_igblast/$DATANAME.igblast.prod.scrub.clon.subclass.subset.CDR3aa_dict.fasta"
+  # checkTargetNewer "$WDIR/$OUT_igblast/$DATANAME.igblast.prod.scrub.clon.fasta*" \
+  #   "$WDIR/$OUT_igblast/$DATANAME.igblast.prod.scrub.clon.subclass.subset.CDR3aa_dict.fasta"
   # TODO: this doesn't take care of the newer UMI5RACE datasets, only the multiplex ones
-  if [[ $? -ne 1 ]]; then
-    hingeProcessingStep $DATASET_species
-  else
+  # if [[ $? -ne 1 ]]; then
+    if [[ -f $WDIR/$OUT_igblast/hinge_processing_stage_complete.txt ]]; then
     echo "Skipping step ... hinge BLAST output processing completed during previous run."
+  else
+    hingeProcessingStep $DATASET_species
+    touch $WDIR/$OUT_igblast/hinge_processing_stage_complete.txt
   fi
 fi
 
 #######################################
 ## Post-processing and visualization ##
 #######################################
-checkTargetNewer "$WDIR/$OUTDIR/$DATANAME.process_stats" "$WDIR/$OUTDIR/FASTAViewer/*.RData"
-if [[ $? -ne 1 ]]; then
+# checkTargetNewer "$WDIR/$OUTDIR/$DATANAME.process_stats" "$WDIR/$OUTDIR/FASTAViewer/*.RData"
+# if [[ $? -ne 1 ]]; then
+if [[ -f $WDIR/$OUTDIR/postprocessing_stage_complete.txt ]]; then
+  echo "Skipping post-processing steps (figures and FASTAViewer processing)."
+else
   if [ -f $WDIR/$SCRDIR/postprocess/postprocess.sh ]; then
     echo "########################################"
     echo "Post-processing (visualization, etc.) ..."
 		# shellcheck source=/dev/null
     source $WDIR/$SCRDIR/postprocess/postprocess.sh
+    touch $WDIR/$OUTDIR/postprocessing_stage_complete.txt
   fi
-else
-  echo "Skipping post-processing steps (figures and FASTAViewer processing)."
 fi
 
 ############################
@@ -272,8 +286,8 @@ fi
 compressIntermediates
 
 if [[ $FRESH -ne 0 ]]; then
-  mv $WDIR/running $WDIR/done
-  echo "done" >> $WDIR/done
-  date >> $WDIR/done
-  cat $WDIR/done >> $WDIR/run.log
+  mv $WDIR/running.txt $WDIR/done.txt
+  echo "done" >> $WDIR/done.txt
+  date >> $WDIR/done.txt
+  cat $WDIR/done.txt >> $WDIR/run.log
 fi
